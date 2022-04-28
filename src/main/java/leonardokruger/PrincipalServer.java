@@ -113,6 +113,7 @@ public class PrincipalServer {
     }
 
     private void sendResponseToClient(String clientCommandResponse) {
+        if (clientCommandResponse.equals("desconectado")) return;
         conectedClients.forEach(client -> {
             try {
                 client.write(ByteBuffer.wrap(clientCommandResponse.getBytes()));
@@ -132,7 +133,10 @@ public class PrincipalServer {
     private String executeCommandLine(byte[] data) throws InterruptedException {
         String command = new String(data);
 
-        if (command.equalsIgnoreCase("desconectar")) return "desconectado";
+        if (command.equalsIgnoreCase("desconectar")) {
+            System.out.println("Um client desconectou");
+            return "desconectado";
+        }
 
         try {
             Process proc = Runtime.getRuntime().exec(command);
