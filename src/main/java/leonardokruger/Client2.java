@@ -52,11 +52,11 @@ public class Client2 implements Runnable {
 
     private void startSendingMessagesFlux() throws IOException {
         String msg;
+        System.out.print("\n --- Liberado para inserção de novo comando ou 'desconectar' --- \n");
         do {
-            System.out.print("\nInsira um comando para execução: ");
             msg = scanner.nextLine();
             clientChannel.write(ByteBuffer.wrap(msg.getBytes()));
-        }while(!msg.equalsIgnoreCase("sair"));
+        } while(!msg.equalsIgnoreCase("desconectar"));
     }
 
     private void processRead() throws IOException {
@@ -72,7 +72,7 @@ public class Client2 implements Runnable {
     }
 
     private void serverConnection() throws IOException {
-        System.out.println("Cliente conectado ao servidor");
+        System.out.println("\nCliente conectado ao servidor");
         if(clientChannel.isConnectionPending()) {
             clientChannel.finishConnect();
         }
@@ -91,8 +91,6 @@ public class Client2 implements Runnable {
                     iterator.remove();
                 }
             }
-        }catch(IOException e){
-            System.err.println("Erro ao ler dados enviados pelo servidor: " + e.getMessage());
-        }
+        }catch(IOException e) { System.err.println("Erro ao ler dados enviados pelo servidor: " + e.getMessage()); }
     }
 }

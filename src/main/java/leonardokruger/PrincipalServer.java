@@ -23,7 +23,7 @@ public class PrincipalServer {
 
     private final ServerSocketChannel serverChannel;
 
-    private List<SocketChannel> conectedClients;
+    private final List<SocketChannel> conectedClients;
 
     private final ByteBuffer buffer;
 
@@ -46,7 +46,7 @@ public class PrincipalServer {
         serverChannel.register(selector, SelectionKey.OP_ACCEPT);
 
         serverChannel.bind(new InetSocketAddress(ADDRESS, PORT), 10000);
-        System.out.println("Servidor iniciado no IP:" + ADDRESS + " na PORTA:" + PORT);
+        System.out.println("\nServidor iniciado no IP: " + ADDRESS + " na PORTA:" + PORT + "\n");
     }
 
     public void startProcess() {
@@ -112,26 +112,46 @@ public class PrincipalServer {
         sendResponseToClient(clientCommandResponse);
     }
 
-    private void sendResponseToClient(String clientCommandResponse){
+    private void sendResponseToClient(String clientCommandResponse) {
         conectedClients.forEach(client -> {
             try {
                 client.write(ByteBuffer.wrap(clientCommandResponse.getBytes()));
-                System.out.println("Response encaminhado ao client: " + client.getRemoteAddress());
-            } catch (IOException e) { System.out.println("Não foi possível retornar o responde ao client"); }
+                printServerLog(clientCommandResponse, client.getRemoteAddress().toString());
+            } catch (IOException e) { System.out.println("\nErro enviando um dos responses"); }
         });
     }
 
-    private String executeCommandLine(byte[] data) throws IOException, InterruptedException {
-        Process proc = Runtime.getRuntime().exec(new String(data));
-        BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-
-        String line = "";
-        String finalStructure = "";
-        while((line = reader.readLine()) != null) {
-            finalStructure = finalStructure.concat(line).concat("\n");
+    private void printServerLog(String clientCommandResponse, String clientInfo){
+        if (clientCommandResponse.equals("desconectado")) {
+            System.out.println("Client " + clientInfo + " desconectado\n");
+        } else {
+            System.out.println("Response encaminhado ao client: " + clientInfo);
         }
-        proc.waitFor();
+    }
 
-        return finalStructure;
+    private String executeCommandLine(byte[] data) throws InterruptedException {
+        String command = new String(data);
+
+        if (command.equalsIgnoreCase("desconectar")) return "desconectado";
+
+        try {
+            Process proc = Runtime.getRuntime().exec(command);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+
+            String line = "";
+            String finalStructure = "";
+            while((line = reader.readLine()) != null) {
+                finalStructure = finalStructure.concat(line).concat("\n");
+            }
+            proc.waitFor();
+
+            finalStructure = finalStructure.concat("\n --- Liberado para inserção de novo comando ou 'desconectar' --- \n");
+
+            return finalStructure;
+
+        } catch (IOException ex) {
+            return "Não foi possível executar o comando -> " + command + "\n" +
+                "\n --- Liberado para inserção de novo comando ou 'desconectar' --- \n";
+        }
     }
 }
