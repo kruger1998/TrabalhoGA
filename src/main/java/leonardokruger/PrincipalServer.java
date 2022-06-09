@@ -1,29 +1,36 @@
 package leonardokruger;
 
+import com.sun.nio.sctp.*;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+
+import static com.sun.nio.sctp.AssociationChangeNotification.AssocChangeEvent.COMM_UP;
 
 public class PrincipalServer {
 
     public static final int PORT = 4600;
 
-    public static final String ADDRESS = "127.0.0.2";
+    public static final String ADDRESS = "127.0.0.9";
 
     private final Selector selector;
 
-    private final ServerSocketChannel serverChannel;
+    private final SctpServerChannel sctpServerChannel;
 
-    private final List<SocketChannel> conectedClients;
+    private final List<SctpChannel> conectedClients;
 
     private final ByteBuffer buffer;
 
@@ -39,13 +46,13 @@ public class PrincipalServer {
     public PrincipalServer() throws IOException {
         buffer = ByteBuffer.allocate(1024);
         selector = Selector.open();
-        serverChannel = ServerSocketChannel.open();
-        serverChannel.configureBlocking(false);
+        sctpServerChannel = SctpServerChannel.open();
+        sctpServerChannel.configureBlocking(false);
         conectedClients = new ArrayList<>();
 
-        serverChannel.register(selector, SelectionKey.OP_ACCEPT);
+        sctpServerChannel.register(selector, SelectionKey.OP_ACCEPT);
 
-        serverChannel.bind(new InetSocketAddress(ADDRESS, PORT), 10000);
+        sctpServerChannel.bind(new InetSocketAddress(ADDRESS, PORT), 10000);
         System.out.println("\nServidor iniciado no IP: " + ADDRESS + " na PORTA:" + PORT + "\n");
     }
 
@@ -80,8 +87,12 @@ public class PrincipalServer {
     private void connectionValidation(SelectionKey key, Selector selector) throws IOException {
         if (!key.isAcceptable()) return;
 
-        SocketChannel clientChannel = serverChannel.accept();
-        System.out.println("Cliente " + clientChannel.getRemoteAddress() + " conectado.\n");
+        SctpChannel clientChannel = sctpServerChannel.accept();
+
+        List<SocketAddress> addresse = new ArrayList<>();
+        addresse.addAll(clientChannel.getRemoteAddresses());
+
+        System.out.println("Cliente " + addresse.get(0).toString() + " conectado.\n");
         clientChannel.configureBlocking(false);
         clientChannel.register(selector, SelectionKey.OP_READ);
 
@@ -90,12 +101,13 @@ public class PrincipalServer {
 
     private void processClientCommand(SelectionKey selectionKey) throws IOException, InterruptedException {
         if (!selectionKey.isReadable()) return;
-        SocketChannel clientChannel = (SocketChannel) selectionKey.channel();
+        SctpChannel clientChannel = (SctpChannel) selectionKey.channel();
         buffer.clear();
-        int bytesRead;
+        MessageInfo bytesRead;
 
         try {
-            bytesRead = clientChannel.read(buffer);
+            AssociationHandler assocHandler = new AssociationHandler();
+            bytesRead = clientChannel.receive(buffer, System.out, assocHandler);
         } catch (IOException e) {
             System.err.println("Erro na leitura de dados");
             clientChannel.close();
@@ -103,12 +115,12 @@ public class PrincipalServer {
             return;
         }
 
-        if (bytesRead <= 0) return;
+        if (Objects.isNull(bytesRead)) return;
         buffer.flip();
-        byte[] data = new byte[bytesRead];
-        buffer.get(data);
+        Charset charset = Charset.forName("ISO-8859-1");
+        CharsetDecoder decoder = charset.newDecoder();
 
-        String clientCommandResponse = executeCommandLine(data);
+        String clientCommandResponse = executeCommandLine(decoder.decode(buffer).toString());
         sendResponseToClient(clientCommandResponse);
     }
 
@@ -116,8 +128,12 @@ public class PrincipalServer {
         if (clientCommandResponse.equals("desconectado")) return;
         conectedClients.forEach(client -> {
             try {
-                client.write(ByteBuffer.wrap(clientCommandResponse.getBytes()));
-                printServerLog(clientCommandResponse, client.getRemoteAddress().toString());
+                MessageInfo messageInfo = MessageInfo.createOutgoing(null,
+                        0);
+                client.send(ByteBuffer.wrap(clientCommandResponse.getBytes()), messageInfo);
+                List<SocketAddress> addresse = new ArrayList<>();
+                addresse.addAll(client.getRemoteAddresses());
+                printServerLog(clientCommandResponse, addresse.get(0).toString());
             } catch (IOException e) { System.out.println("\nErro enviando um dos responses"); }
         });
     }
@@ -130,8 +146,8 @@ public class PrincipalServer {
         }
     }
 
-    private String executeCommandLine(byte[] data) throws InterruptedException {
-        String command = new String(data);
+    private String executeCommandLine(String data) throws InterruptedException {
+        String command = data;
 
         if (command.equalsIgnoreCase("desconectar")) {
             System.out.println("Um client desconectou");
@@ -154,8 +170,28 @@ public class PrincipalServer {
             return finalStructure;
 
         } catch (IOException ex) {
-            return "Não foi possível executar o comando -> " + command + "\n" +
-                "\n --- Liberado para inserção de novo comando ou 'desconectar' --- \n";
+            return "Nao foi possivel executar o comando -> " + command + "\n" +
+                "\n --- Liberado para insercao de novo comando --- \n";
         }
     }
+
+    static class AssociationHandler
+            extends AbstractNotificationHandler<PrintStream>
+    {
+        public HandlerResult handleNotification(AssociationChangeNotification not,
+                                                PrintStream stream) {
+            if (not.event().equals(COMM_UP)) {
+                int outbound = not.association().maxOutboundStreams();
+                int inbound = not.association().maxInboundStreams();
+            }
+
+            return HandlerResult.CONTINUE;
+        }
+
+        public HandlerResult handleNotification(ShutdownNotification not,
+                                                PrintStream stream) {
+            return HandlerResult.RETURN;
+        }
+    }
+
 }

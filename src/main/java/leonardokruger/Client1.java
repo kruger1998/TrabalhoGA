@@ -1,12 +1,17 @@
 package leonardokruger;
 
+import com.sun.nio.sctp.MessageInfo;
+import com.sun.nio.sctp.SctpChannel;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.Scanner;
 import java.util.Set;
 
@@ -16,7 +21,7 @@ public class Client1 implements Runnable {
 
     private final Selector selector;
 
-    private final SocketChannel clientChannel;
+    private final SctpChannel clientChannel;
 
     private final ByteBuffer buffer = ByteBuffer.allocateDirect(1024);
 
@@ -29,7 +34,7 @@ public class Client1 implements Runnable {
 
     public Client1() throws IOException {
         selector = Selector.open();
-        clientChannel = SocketChannel.open();
+        clientChannel = SctpChannel.open();
         clientChannel.configureBlocking(false);
         clientChannel.register(selector, SelectionKey.OP_CONNECT | SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
@@ -52,22 +57,25 @@ public class Client1 implements Runnable {
 
     private void startSendingMessagesFlux() throws IOException {
         String msg;
-        System.out.print("\n --- Liberado para inserção de novo comando ou 'desconectar' --- \n");
+        System.out.print("\n --- Liberado para insercao de novo comando --- \n");
         do {
             msg = scanner.nextLine();
-            clientChannel.write(ByteBuffer.wrap(msg.getBytes()));
+            MessageInfo messageInfo = MessageInfo.createOutgoing(null,
+                    0);
+            clientChannel.send(ByteBuffer.wrap(msg.getBytes()), messageInfo);
         } while(!msg.equalsIgnoreCase("desconectar"));
     }
 
     private void processRead() throws IOException {
         buffer.clear();
-        int bytesRead = clientChannel.read(buffer);
+        PrincipalServer.AssociationHandler assocHandler = new PrincipalServer.AssociationHandler();
+        MessageInfo bytesRead = clientChannel.receive(buffer, System.out, assocHandler);
         buffer.flip();
+        Charset charset = Charset.forName("ISO-8859-1");
+        CharsetDecoder decoder = charset.newDecoder();
 
-        if (bytesRead > 0) {
-            byte data[] = new byte[bytesRead];
-            buffer.get(data);
-            System.out.println("\nMensagem recebida do servidor: " + new String(data));
+        if (!Objects.isNull(bytesRead) && bytesRead.isComplete()) {
+            System.out.println("\nMensagem recebida do servidor: \n" + decoder.decode(buffer));
         }
     }
 
@@ -93,4 +101,5 @@ public class Client1 implements Runnable {
             }
         }catch(IOException e) { System.err.println("Erro ao ler dados enviados pelo servidor: " + e.getMessage()); }
     }
+
 }
