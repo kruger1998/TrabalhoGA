@@ -1,0 +1,35 @@
+
+`	java:S112H"FDefine and throw a dedicated exception instead of using a generic one.(Ò‚Òéüÿÿÿÿ
+i
+java:S1192€"MDefine a constant instead of duplicating this literal "desconectado" 3 times.(Ò®ô­ûÿÿÿÿ
+P
+java:S1191"5Use classes from the Java API instead of Sun classes.(Ó˜Ü¶úÿÿÿÿ
+7
+java:S2189<""Add an end condition to this loop.(¤èÄ7
+S	java:S106+"9Replace this use of System.out or System.err by a logger.(«¢£Öüÿÿÿÿ
+N	java:S1068"9Replace this use of System.out or System.err by a logger.(ÒÒ³†
+N	java:S106@"9Replace this use of System.out or System.err by a logger.(ÆÑê
+t
+java:S2142G"^Either re-interrupt this method or rethrow the "InterruptedException" that can be caught here.(ä ¹€
+N	java:S106T"9Replace this use of System.out or System.err by a logger.( ïæÂ
+N	java:S106_"9Replace this use of System.out or System.err by a logger.(¥ãð‡
+N	java:S106n"9Replace this use of System.out or System.err by a logger.(ñÝš’
+S	java:S106p"9Replace this use of System.out or System.err by a logger.(‘à£­ÿÿÿÿÿ
+Z
+java:S4719x"?Replace Charset.forName() call with StandardCharsets.ISO_8859_1(°‹åáüÿÿÿÿ
+O	java:S106‰"9Replace this use of System.out or System.err by a logger.(³Æ
+T	java:S106"9Replace this use of System.out or System.err by a logger.(þç­ÿÿÿÿÿ
+T	java:S106‘"9Replace this use of System.out or System.err by a logger.(¤Ù‰àüÿÿÿÿ
+O	java:S106™"9Replace this use of System.out or System.err by a logger.(ÍõÉ›
+W
+java:S1854¹";Remove this useless assignment to local variable "inbound".(øÎúºþÿÿÿÿ
+X
+java:S1854¸"<Remove this useless assignment to local variable "outbound".(Þ´ïýÿÿÿÿ
+V
+java:S1161µ":Add the "@Override" annotation above this method signature(¬Ø•Þùÿÿÿÿ
+I
+java:S1481¸"-Remove this unused "outbound" local variable.(Þ´ïýÿÿÿÿ
+H
+java:S1481¹",Remove this unused "inbound" local variable.(øÎúºþÿÿÿÿ
+Q
+java:S1161¿":Add the "@Override" annotation above this method signature(ô«»Ð
